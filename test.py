@@ -13,9 +13,9 @@ def get_random_image(query):
     # Paramètres de la requête
     if query == "":
         params = {
-            "query": "random",
+            # "query": "random",
             "client_id": access_key,
-            "orientation": "landscape",  # Assure-toi d'avoir une image de paysage
+            # "orientation": "landscape",  # Assure-toi d'avoir une image de paysage
             # "per_page": 10  # Nombre maximum d'images à récupérer
         }
         # Requête GET à l'API Unsplash sans mot-clé spécifié
@@ -38,7 +38,7 @@ def get_random_image(query):
         params = {
             "query": query,
             "client_id": access_key,
-            "orientation": "landscape",  # Assure-toi d'avoir une image de paysage
+            # "orientation": "landscape",  # Assure-toi d'avoir une image de paysage
             "per_page": 10  # Nombre maximum d'images à récupérer
         }
         # Requête GET à l'API Unsplash
@@ -114,11 +114,31 @@ def traitement_image(param):
     
     
     
-    
-    
     # Mettre à jour l'image affichée
     photo = ImageTk.PhotoImage(bw_image)
     label.config(image=photo)
+
+
+def apply_filters():
+    # Applique les filtres sélectionnés sur l'image
+    # Obtenez l'image d'origine
+    image_filtered = image.copy()
+
+    # Appliquer le filtre noir et blanc si la case est cochée
+    if bw_var.get():
+        image_filtered = ImageOps.grayscale(image_filtered)
+
+    # Appliquer le filtre d'inversion de couleurs si la case est cochée
+    if invert_var.get():
+        image_filtered = ImageOps.invert(image_filtered)
+
+    photo = ImageTk.PhotoImage(image_filtered)
+    label.config(image=photo)
+    label.image = photo  # Garde une référence pour éviter la suppression par le garbage collector
+
+
+
+
 
 def reset():
     global image, photo, label
@@ -138,7 +158,13 @@ def update_image():
     if os.path.getmtime(image_path) != last_modified:
         # Met à jour l'image affichée
         image = Image.open(image_path)
+
+        # photo = resize_image(image)
+
+        # photo = ImageTk.PhotoImage(photo)
+
         photo = ImageTk.PhotoImage(image)
+
         label.config(image=photo)
         # Met à jour le timestamp de dernière modification
         last_modified = os.path.getmtime(image_path)
@@ -163,9 +189,6 @@ def resize_image(image, max_width=800, max_height=600):
         width = int(height * aspect_ratio)
     
     return image.resize((width, height))
-
-
-
 
 
 if __name__ == "__main__":
@@ -194,10 +217,14 @@ if __name__ == "__main__":
     
 
 
-
     # Chargement de l'image
     image_path = "images\downloaded_image.jpg"  # Chemin vers l'image
     image = Image.open(image_path)
+
+    # photo = resize_image(image)
+
+    # photo = ImageTk.PhotoImage(photo)
+
     photo = ImageTk.PhotoImage(image)
 
 
@@ -237,25 +264,40 @@ if __name__ == "__main__":
     scanButton1.pack(side=tk.LEFT, padx=25)
     # scanButton1.grid(row=7, column=3)
 
-    scanButton3 = tk.Button(frame1, text="Miroir", command = lambda: traitement_image("Miroir"))
-    scanButton3.config(width=20, height=2)
-    scanButton3.pack(side=tk.LEFT, padx=25)
+    # Créez des variables de contrôle pour chaque filtre
+    bw_var = tk.BooleanVar()
+    bw_checkbox = tk.Checkbutton(frame1, text="Noir et blanc", variable=bw_var, command=apply_filters)
+    bw_checkbox.pack()
 
-    scanButton4 = tk.Button(frame1, text="Inversion", command = lambda: traitement_image("Inversion"))
-    scanButton4.config(width=20, height=2)
-    scanButton4.pack(side=tk.LEFT, padx=25)
 
-    scanButton5 = tk.Button(frame1, text="Flip", command = lambda: traitement_image("Flip"))
-    scanButton5.config(width=20, height=2)
-    scanButton5.pack(side=tk.LEFT, padx=25)
+    # Créez une variable de contrôle pour le filtre Inversion de couleurs
+    invert_var = tk.BooleanVar()
 
-    scanButton6 = tk.Button(frame1, text="Accent", command = lambda: traitement_image("Accent"))
-    scanButton6.config(width=20, height=2)
-    scanButton6.pack(side=tk.LEFT, padx=25)
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    invert_checkbox = tk.Checkbutton(frame1, text="Inversion de couleurs", variable=invert_var, command=apply_filters)
+    invert_checkbox.pack()
 
-    scanButton7 = tk.Button(frame1, text="Contraste", command = lambda: traitement_image("Contraste"))
-    scanButton7.config(width=20, height=2)
-    scanButton7.pack(side=tk.LEFT, padx=25)
+
+
+    # scanButton3 = tk.Button(frame1, text="Miroir", command = lambda: traitement_image("Miroir"))
+    # scanButton3.config(width=20, height=2)
+    # scanButton3.pack(side=tk.LEFT, padx=25)
+
+    # scanButton4 = tk.Button(frame1, text="Inversion", command = lambda: traitement_image("Inversion"))
+    # scanButton4.config(width=20, height=2)
+    # scanButton4.pack(side=tk.LEFT, padx=25)
+
+    # scanButton5 = tk.Button(frame1, text="Flip", command = lambda: traitement_image("Flip"))
+    # scanButton5.config(width=20, height=2)
+    # scanButton5.pack(side=tk.LEFT, padx=25)
+
+    # scanButton6 = tk.Button(frame1, text="Accent", command = lambda: traitement_image("Accent"))
+    # scanButton6.config(width=20, height=2)
+    # scanButton6.pack(side=tk.LEFT, padx=25)
+
+    # scanButton7 = tk.Button(frame1, text="Contraste", command = lambda: traitement_image("Contraste"))
+    # scanButton7.config(width=20, height=2)
+    # scanButton7.pack(side=tk.LEFT, padx=25)
 
     scanButton2 = tk.Button(frame1, text="Réinitialiser", command = reset)
     scanButton2.config(width=20, height=2)
