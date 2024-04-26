@@ -4,7 +4,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 from PIL import ImageTk, Image, ImageOps, ImageFilter
-from io import BytesIO
+# from io import BytesIO
 
 def get_random_image(query):
     # Remplace "YOUR_ACCESS_KEY" par ta clé d'API Unsplash
@@ -13,9 +13,9 @@ def get_random_image(query):
     # Paramètres de la requête
     if query == "":
         params = {
-            "query": "random",
+            # "query": "random",
             "client_id": access_key,
-            "orientation": "landscape",  # Assure-toi d'avoir une image de paysage
+            # "orientation": "landscape",  # Assure-toi d'avoir une image de paysage
             # "per_page": 10  # Nombre maximum d'images à récupérer
         }
         # Requête GET à l'API Unsplash sans mot-clé spécifié
@@ -38,7 +38,7 @@ def get_random_image(query):
         params = {
             "query": query,
             "client_id": access_key,
-            "orientation": "landscape",  # Assure-toi d'avoir une image de paysage
+            # "orientation": "landscape",  # Assure-toi d'avoir une image de paysage
             "per_page": 10  # Nombre maximum d'images à récupérer
         }
         # Requête GET à l'API Unsplash
@@ -84,62 +84,98 @@ def get_new_image(word="random") :
         print("Image téléchargée:", image_url)
         image_path = download_image(image_url)
         if image_path:
+
+            texte_variable = "L'image a été téléchargée avec succès: " + image_path
+            textmodif.config(text=texte_variable)
+
             print("L'image a été téléchargée avec succès:", image_path)
+
+            # resize_image_to_fit_window()
+            resize_im()
         else:
             print("Impossible de télécharger l'image.")
     else:
         print("Impossible de récupérer l'image.")
 
 
-def traitement_image(param):
-    global image, photo, label
+def apply_filters():
+    # Applique les filtres sélectionnés sur l'image
+    # Obtenez l'image d'origine
+    image_filtered = Image.open(image_path)
 
-    match param:
-        case "Noir et blanc" :
-            # Convertir l'image en noir et blanc
-            bw_image = image.convert("L")
-        case "Miroir" :
-            bw_image = ImageOps.mirror(image)
-        case "Inversion" :
-            bw_image = ImageOps.invert(image)
-        case "Flip" :
-            bw_image = ImageOps.flip(image)
-        case "Accent" :
-            # bw_image = image.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
-            bw_image = image.filter(ImageFilter.SHARPEN)
-        case "Contraste" :
-            bw_image = ImageOps.equalize(image, mask=None)
-        case _:
-            print("Error")
+    # Appliquer le filtre noir et blanc si la case est cochée
+    if bw_var.get():
+        image_filtered = ImageOps.grayscale(image_filtered)
+
+    # Appliquer le filtre d'inversion de couleurs si la case est cochée
+    if invert_var.get():
+        image_filtered = ImageOps.invert(image_filtered)
+
+    # Appliquer le filtre d'inversion de couleurs si la case est cochée
+    if flipy_var.get():
+        image_filtered = ImageOps.mirror(image_filtered)
     
+    if flipx_var.get():
+        image_filtered = ImageOps.flip(image_filtered)
+
+    if equalize_var.get():
+        image_filtered = ImageOps.equalize(image_filtered, mask=None)
+
+    if blur_var.get():
+        # image_filtered = image_filtered.filter(ImageFilter.BLUR)
+        image_filtered = image_filtered.filter(ImageFilter.GaussianBlur(radius=5))
     
+    if contour_var.get():
+        image_filtered = image_filtered.filter(ImageFilter.CONTOUR)
+
+    if detail_var.get():
+        image_filtered = image_filtered.filter(ImageFilter.DETAIL)
+
+    if edge_enhance_var.get():
+        image_filtered = image_filtered.filter(ImageFilter.EDGE_ENHANCE)
     
+    if emboss_var.get():
+        image_filtered = image_filtered.filter(ImageFilter.EMBOSS)
     
+    if find_edges_var.get():
+        image_filtered = image_filtered.filter(ImageFilter.FIND_EDGES)
     
-    # Mettre à jour l'image affichée
-    photo = ImageTk.PhotoImage(bw_image)
+    if sharpen_var.get():
+        image_filtered = image_filtered.filter(ImageFilter.SHARPEN)
+
+    photo = ImageTk.PhotoImage(image_filtered)
     label.config(image=photo)
+    label.image = photo  # Garde une référence pour éviter la suppression par le garbage collector
 
 def reset():
-    global image, photo, label
-
-
-    image_path = "images\downloaded_image.jpg"  # Chemin vers l'image
-    image = Image.open(image_path)
-    photo = ImageTk.PhotoImage(image)
-
-    # Mettre à jour l'image affichée
-    label.config(image=photo)
+# if os.path.getmtime(image_path) == last_modified:
+    bw_var.set(False)
+    invert_var.set(False)
+    flipy_var.set(False)
+    flipx_var.set(False)
+    sharpen_var.set(False)
+    equalize_var.set(False)
+    blur_var.set(False)
+    contour_var.set(False)
+    detail_var.set(False)
+    edge_enhance_var.set(False)
+    emboss_var.set(False)
+    find_edges_var.set(False)
+    sharpen_var.set(False)
+    # Appliquer les filtres à nouveau
+    apply_filters()
 
 def update_image():
-    global image, photo, label, image_path, last_modified
+    global last_modified
     
     # Vérifie si le fichier image a été modifié
     if os.path.getmtime(image_path) != last_modified:
         # Met à jour l'image affichée
         image = Image.open(image_path)
+
         photo = ImageTk.PhotoImage(image)
         label.config(image=photo)
+        label.image = photo
         # Met à jour le timestamp de dernière modification
         last_modified = os.path.getmtime(image_path)
     
@@ -147,42 +183,121 @@ def update_image():
     gui.after(1000, update_image)
 
 
-# Fonction pour redimensionner une image tout en conservant le ratio hauteur / largeur
-def resize_image(image, max_width=800, max_height=600):
-    width, height = image.size
-    aspect_ratio = width / height
+
+def resize_im():
+
+    image = Image.open(image_path)
+
+    # Obtient les dimensions de l'image
+    image_width, image_height = image.size
+
+    frame_width = frame1.winfo_width()
+    frame_height = frame1.winfo_height()
+
+    # Calcul des dimensions de la fenêtre (80% de la taille de l'écran)
+    max_width = int(frame_width * 0.9)
+    max_height = int(frame_height * 0.9)
+
+    # Vérifie si l'image est plus grande que la fenêtre
+    if image_width > max_width or image_height > max_height:
+        # Calculer le ratio hauteur/largeur de l'image
+        image_ratio = image_width / image_height
+
+        # Redimensionne l'image en fonction de la plus grande dimension (largeur ou hauteur)
+        if image_width > image_height:
+            new_width = max_width
+            new_height = int(max_width / image_ratio)
+        else:
+            new_height = max_height
+            new_width = int(max_height * image_ratio)
+
+        resized_image = ImageOps.fit(image, (new_width, new_height), method=0, bleed=0.0, centering=(0.5, 0.5))
+        resized_image.save("images\downloaded_image.jpg")
+
+def quitter():
+    gui.quit()
+
+def telecharger_image_filtree():
+    # Appliquer d'abord le filtre blur à une copie de l'image originale
+    image_originale = Image.open(image_path)
+    image_filtree = image_originale.copy()
+
+    if bw_var.get():
+        image_filtree = ImageOps.grayscale(image_filtree)
+
+    # Appliquer le filtre d'inversion de couleurs si la case est cochée
+    if invert_var.get():
+        image_filtree = ImageOps.invert(image_filtree)
+
+    # Appliquer le filtre d'inversion de couleurs si la case est cochée
+    if flipy_var.get():
+        image_filtree = ImageOps.mirror(image_filtree)
     
-    # Redimensionne l'image en fonction de la largeur maximale tout en conservant le ratio
-    if width > max_width:
-        width = max_width
-        height = int(width / aspect_ratio)
+    if flipx_var.get():
+        image_filtree = ImageOps.flip(image_filtree)
+
+    if equalize_var.get():
+        image_filtree = ImageOps.equalize(image_filtree, mask=None)
+
+    if blur_var.get():
+        # image_filtree = image_filtree.filter(ImageFilter.BLUR)
+        image_filtree = image_filtree.filter(ImageFilter.GaussianBlur(radius=5))
     
-    # Redimensionne l'image en fonction de la hauteur maximale tout en conservant le ratio
-    if height > max_height:
-        height = max_height
-        width = int(height * aspect_ratio)
+    if contour_var.get():
+        image_filtree = image_filtree.filter(ImageFilter.CONTOUR)
+
+    if detail_var.get():
+        image_filtree = image_filtree.filter(ImageFilter.DETAIL)
+
+    if edge_enhance_var.get():
+        image_filtree = image_filtree.filter(ImageFilter.EDGE_ENHANCE)
     
-    return image.resize((width, height))
+    if emboss_var.get():
+        image_filtree = image_filtree.filter(ImageFilter.EMBOSS)
+    
+    if find_edges_var.get():
+        image_filtree = image_filtree.filter(ImageFilter.FIND_EDGES)
+    
+    if sharpen_var.get():
+        image_filtree = image_filtree.filter(ImageFilter.SHARPEN)
 
-
-
-
+    # Télécharger l'image filtrée
+    image_filtree_path = "images/image_filtree_apres_blur.jpg"  # Chemin de l'image filtrée après le filtre blur
+    image_filtree.save(image_filtree_path)  # Enregistrer l'image filtrée après le filtre blur
+    print("Image filtrée après blur téléchargée avec succès:", image_filtree_path)
 
 if __name__ == "__main__":
     # Paramètre de la fenêtre
     gui = tk.Tk()
     gui.title("API Application")
-    gui.geometry("1500x900") # Taille de la fenêtre
 
+    # Obtention des dimensions de l'écran
+    screen_width = gui.winfo_screenwidth()
+    screen_height = gui.winfo_screenheight()
+
+    # Calcul des dimensions de la fenêtre (80% de la taille de l'écran)
+    window_width = int(screen_width * 0.9)
+    window_height = int(screen_height * 0.9)
+
+    # Définition des dimensions de la fenêtre
+    gui.geometry(f"{window_width}x{window_height}")
 
     #Création du Notebook (widget contenant les onglets)
     notebook = ttk.Notebook(gui)
     notebook.pack(pady=10, padx=10)
 
+    # Obtention des dimensions de l'écran
+    window_width = gui.winfo_screenwidth()
+    window_height = gui.winfo_screenheight()
+
+    # Calcul des dimensions de la fenêtre (80% de la taille de l'écran)
+    window_width = int(screen_width * 0.7)
+    window_height = int(screen_height * 0.7)
+
     # Création des différents cadres (onglets) à ajouter au Notebook
-    frame1 = tk.Frame(notebook, width=400, height=300)
-    frame2 = tk.Frame(notebook, width=400, height=300)
-    frame3 = tk.Frame(notebook, width=400, height=300)
+    frame1 = tk.Frame(notebook, width=1400, height=800)
+    frame2 = tk.Frame(notebook, width=1400, height=800)
+    frame3 = tk.Frame(notebook, width=1400, height=800)
 
 
     # Ajout des cadres (onglets) au Notebook avec un titre pour chaque onglet
@@ -190,80 +305,124 @@ if __name__ == "__main__":
     notebook.add(frame2, text='Onglet 2')
     notebook.add(frame3, text='Onglet 3')
 
-
-    
-
-
-
     # Chargement de l'image
     image_path = "images\downloaded_image.jpg"  # Chemin vers l'image
     image = Image.open(image_path)
-    photo = ImageTk.PhotoImage(image)
 
-
-    searchInLabel = tk.StringVar()
-
+    # original_width, original_height = image.size
     
-
-
+    photo = ImageTk.PhotoImage(image)
+    
     # Création d'un widget Label pour afficher l'image
     label = tk.Label(frame1, image=photo)
-    # label.grid(row=7, column=4)
-    label.pack(side=tk.TOP)
+    label.grid(row=0, column=0, columnspan=15)
 
-    label1 = tk.Label(frame1, text = "Recherche")
-    label.pack(side=tk.TOP)
-    # label1.grid(row=0, column=0)
+    # Créez une variable de contrôle pour le filtre Inversion de couleurs
+    bw_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    bw_checkbox = tk.Checkbutton(frame1, text="Noir et blancs", variable=bw_var, command=apply_filters)
+    bw_checkbox.grid(row=1, column=0)
 
-    # label2 = tk.Label(gui, text = "Recherche")
-    # label2.grid(row=1, column=0)
 
-    # label3 = tk.Label(gui, text = "Recherche")
-    # label3.grid(row=1, column=1)
+    # Créez une variable de contrôle pour le filtre Inversion de couleurs
+    invert_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    invert_checkbox = tk.Checkbutton(frame1, text="Inversion de couleurs", variable=invert_var, command=apply_filters)
+    invert_checkbox.grid(row=1, column=1)
 
-    entry = tk.Entry(frame1, textvariable = searchInLabel)
-    entry.pack()
-    # entry.grid(row=2, column=3)
+    # Créez une variable de contrôle pour le filtre Inversion de couleurs
+    flipy_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    flipy_checkbox = tk.Checkbutton(frame1, text="Miroir", variable=flipy_var, command=apply_filters)
+    flipy_checkbox.grid(row=1, column=2)
 
-    scanButton = tk.Button(frame1, text="Image aléatoire", command = lambda: get_new_image(searchInLabel.get()))
-    scanButton.config(width=20, height=2)
-    scanButton.pack(side=tk.LEFT, padx=25)
-    # scanButton.grid(row=6, column=3)
+    flipx_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    flipx_checkbox = tk.Checkbutton(frame1, text="FlipX", variable=flipx_var, command=apply_filters)
+    flipx_checkbox.grid(row=1, column=3)
+
     
-    
 
-    scanButton1 = tk.Button(frame1, text="Noir et blanc", command = lambda: traitement_image("Noir et blanc"))
-    scanButton1.config(width=20, height=2)
-    scanButton1.pack(side=tk.LEFT, padx=25)
-    # scanButton1.grid(row=7, column=3)
+    equalize_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    equalize_checkbox = tk.Checkbutton(frame1, text="Equalize", variable=equalize_var, command=apply_filters)
+    equalize_checkbox.grid(row=1, column=4)
 
-    scanButton3 = tk.Button(frame1, text="Miroir", command = lambda: traitement_image("Miroir"))
-    scanButton3.config(width=20, height=2)
-    scanButton3.pack(side=tk.LEFT, padx=25)
+    blur_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    blur_checkbox = tk.Checkbutton(frame1, text="Blur", variable=blur_var, command=apply_filters)
+    blur_checkbox.grid(row=1, column=5)
 
-    scanButton4 = tk.Button(frame1, text="Inversion", command = lambda: traitement_image("Inversion"))
-    scanButton4.config(width=20, height=2)
-    scanButton4.pack(side=tk.LEFT, padx=25)
+    contour_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    contour_checkbox = tk.Checkbutton(frame1, text="Contour", variable=contour_var, command=apply_filters)
+    contour_checkbox.grid(row=1, column=6)
 
-    scanButton5 = tk.Button(frame1, text="Flip", command = lambda: traitement_image("Flip"))
-    scanButton5.config(width=20, height=2)
-    scanButton5.pack(side=tk.LEFT, padx=25)
+    detail_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    detail_checkbox = tk.Checkbutton(frame1, text="Detail", variable=detail_var, command=apply_filters)
+    detail_checkbox.grid(row=1, column=7)
 
-    scanButton6 = tk.Button(frame1, text="Accent", command = lambda: traitement_image("Accent"))
-    scanButton6.config(width=20, height=2)
-    scanButton6.pack(side=tk.LEFT, padx=25)
+    edge_enhance_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    edge_enhance_checkbox = tk.Checkbutton(frame1, text="Edge enhance", variable=edge_enhance_var, command=apply_filters)
+    edge_enhance_checkbox.grid(row=1, column=8)
 
-    scanButton7 = tk.Button(frame1, text="Contraste", command = lambda: traitement_image("Contraste"))
-    scanButton7.config(width=20, height=2)
-    scanButton7.pack(side=tk.LEFT, padx=25)
+    emboss_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    emboss_checkbox = tk.Checkbutton(frame1, text="Emboss", variable=emboss_var, command=apply_filters)
+    emboss_checkbox.grid(row=1, column=9)
+
+    find_edges_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    find_edges_checkbox = tk.Checkbutton(frame1, text="Find Edges", variable=find_edges_var, command=apply_filters)
+    find_edges_checkbox.grid(row=1, column=10)
+
+    sharpen_var = tk.BooleanVar()
+    # Créez une case à cocher pour le filtre Inversion de couleurs
+    sharpen_checkbox = tk.Checkbutton(frame1, text="Sharpen", variable=sharpen_var, command=apply_filters)
+    sharpen_checkbox.grid(row=1, column=11)
 
     scanButton2 = tk.Button(frame1, text="Réinitialiser", command = reset)
-    scanButton2.config(width=20, height=2)
-    scanButton2.pack(side=tk.LEFT, padx=25)
+    scanButton2.config(width=15, height=1)
+    scanButton2.grid(row=3, column=0)
 
+    searchInLabel = tk.StringVar()
+    entry = tk.Entry(frame1, textvariable = searchInLabel)
+    entry.grid(row=2, column=1)
+
+    scanButton3 = tk.Button(frame1, text="Nouvelle image", command =lambda:[get_new_image(searchInLabel.get()), reset() ])
+    scanButton3.config(width=15, height=1)
+    scanButton3.grid(row=2, column=0, sticky='ew')
+
+    # Créer un bouton Quitter
+    bouton_quitter = tk.Button(frame1, text="Quitter", command=quitter)
+    bouton_quitter.grid(row=4, column=3)
+
+    # Créer une variable pour le texte
+    texte_variable = "Texte initial"
+    # Créer un Label pour afficher le texte
+    textmodif = tk.Label(frame1, text=texte_variable)
+    textmodif.grid(row=2, column=2, columnspan=5)
+
+
+    
+
+    # Ajoutez un bouton "Télécharger" à votre interface utilisateur
+    bouton_telecharger = tk.Button(frame1, text="Télécharger", command=telecharger_image_filtree)
+    bouton_telecharger.config(width=15, height=1)
+    bouton_telecharger.grid(row=4, column=0)
+    
     last_modified = os.path.getmtime(image_path)
 
     # Lance la fonction pour détecter les modifications d'image
     update_image()
 
+    for i in range(11):
+        frame1.grid_columnconfigure(i, minsize=110)
+
+    gui.resizable(False, False)
+
     gui.mainloop()
+
+

@@ -1,2 +1,2 @@
-columnconfigure(0, minsize=100)  # Colonne 3 avec une largeur minimale de 100 pixels
-    # gui.grid_
+e = tk.Frame(frame1, bg="#FF00FF")
+    # bw_checkbox_frame
